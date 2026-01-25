@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="uz">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MSR Mini App</title>
+
+    <!-- Telegram WebApp SDK (works inside Telegram) -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+
+  <body>
+    <div class="bg" aria-hidden="true"></div>
+
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">MSR</div>
+        <div>
+          <div class="title">MSR Mini App</div>
+          <div class="subtitle" id="subtitle">Test ishlash</div>
+        </div>
+      </div>
+      <button class="ghost" id="btnTheme" type="button" title="Theme">🌓</button>
+    </header>
+
+    <main class="shell">
+      <section class="card" id="screenGate" hidden>
+        <h2>Avval kanal/guruhga qo‘shiling</h2>
+        <p class="muted" id="gateMsg">Mini App’dan foydalanish uchun obuna bo‘lish shart.</p>
+        <div class="gateBtns">
+          <a class="btn" id="gateChannel" href="#" target="_blank" rel="noreferrer">➡️ Kanal</a>
+          <a class="btn" id="gateGroup" href="#" target="_blank" rel="noreferrer">➡️ Guruh</a>
+        </div>
+        <button class="btn primary" id="gateCheck" type="button">✅ Tekshirish</button>
+      </section>
+
+      <section class="grid" id="screenMain">
+        <aside class="card panel">
+          <h2>Kategoriya</h2>
+          <div class="chips" id="catChips"></div>
+          <div class="spacer"></div>
+          <div class="hint">
+            <div class="hintTitle">Eslatma</div>
+            <div class="muted">
+              Sertifikatni natijadan keyin Mini App'dagi tugma orqali bot chatiga yuborasiz.
+            </div>
+          </div>
+        </aside>
+
+        <section class="card content">
+          <div class="row">
+            <h2 id="testsTitle">Testlar</h2>
+            <div class="rowRight">
+              <span class="pill" id="pillStatus">—</span>
+            </div>
+          </div>
+
+          <div id="testsList" class="list"></div>
+
+          <div id="screenSolve" hidden>
+            <div class="solveTop">
+              <div>
+                <div class="solveName" id="solveName">—</div>
+                <div class="muted" id="solveMeta">—</div>
+              </div>
+              <div class="solveActions">
+                <button class="ghost" id="btnBack" type="button">⬅️ Orqaga</button>
+                <button class="ghost" id="btnHome" type="button">🏠 Asosiy</button>
+                <button class="btn primary" id="btnSubmit" type="button">✅ Yakunlash</button>
+              </div>
+            </div>
+
+            <div class="progress">
+              <div class="bar" id="bar"></div>
+            </div>
+            <div class="muted small" id="progressText">0 / 0</div>
+
+            <div class="solveGrid">
+              <div class="qnav" id="qnav"></div>
+              <div class="qcard">
+                <div class="qtitle">Savol <span id="qnum">1</span></div>
+                <div class="choices" id="choices"></div>
+                <div class="qbottom">
+                  <button class="ghost" id="btnPrev" type="button">◀</button>
+                  <button class="ghost" id="btnNext" type="button">▶</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="result" id="result" hidden>
+              <h3>Natija</h3>
+              <div class="resultGrid">
+                <div class="metric">
+                  <div class="metricLabel">To‘g‘ri</div>
+                  <div class="metricValue" id="mCorrect">—</div>
+                </div>
+                <div class="metric">
+                  <div class="metricLabel">Foiz</div>
+                  <div class="metricValue" id="mPercent">—</div>
+                </div>
+                <div class="metric" id="mExtraWrap" hidden>
+                  <div class="metricLabel" id="mExtraLabel">—</div>
+                  <div class="metricValue" id="mExtra">—</div>
+                </div>
+              </div>
+
+              <div class="resultBtns">
+                <button class="btn" id="btnPdf" type="button">📄 PDFni botdan olish</button>
+                <button class="btn" id="btnCert" type="button">🏅 Sertifikat</button>
+                <button class="btn primary" id="btnAgain" type="button">🔁 Yana test ishlash</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="muted small">MSR • Telegram Mini App • Production</div>
+    </footer>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
