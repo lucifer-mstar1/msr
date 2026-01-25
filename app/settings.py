@@ -32,10 +32,12 @@ class Settings(BaseSettings):
     admin_panel_token: str = Field(default="", alias="ADMIN_PANEL_TOKEN")
 
     # MiniApp (aiohttp)
-    miniapp_host: str = Field(default="127.0.0.1", alias="MINIAPP_HOST")
-    miniapp_port: int = Field(default=8000, alias="MINIAPP_PORT")
-    miniapp_public_url: str = Field(default="", alias="MINIAPP_PUBLIC_URL")  # e.g. https://xxxx.ngrok-free.app
-    miniapp_dev_bypass: bool = Field(default=False, alias="MINIAPP_DEV_BYPASS")  # 1=true: allow ?dev_tg_id=
+    # MiniApp (aiohttp)
+    miniapp_host: str = Field(default="0.0.0.0", alias="MINIAPP_HOST")
+    miniapp_port: int = Field(default_factory=lambda: int(os.getenv("PORT", os.getenv("MINIAPP_PORT", "8000"))), alias="MINIAPP_PORT")
+    miniapp_public_url: str = Field(default="", alias="MINIAPP_PUBLIC_URL")
+    miniapp_dev_bypass: bool = Field(default=False, alias="MINIAPP_DEV_BYPASS")
+
 
     # UX
     emoji_mode_default: bool = Field(default=True, alias="EMOJI_MODE_DEFAULT")
