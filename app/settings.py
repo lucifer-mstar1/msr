@@ -33,10 +33,12 @@ class Settings(BaseSettings):
 
     # MiniApp (aiohttp)
     # MiniApp (aiohttp)
+    # MiniApp (aiohttp)
     miniapp_host: str = Field(default="0.0.0.0", alias="MINIAPP_HOST")
     miniapp_port: int = Field(default_factory=lambda: int(os.getenv("PORT", os.getenv("MINIAPP_PORT", "8000"))), alias="MINIAPP_PORT")
     miniapp_public_url: str = Field(default="", alias="MINIAPP_PUBLIC_URL")
     miniapp_dev_bypass: bool = Field(default=False, alias="MINIAPP_DEV_BYPASS")
+
 
 
     # UX
