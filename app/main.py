@@ -45,6 +45,16 @@ async def main() -> None:
         except Exception:
             pass
 
+async def main():
+    try:
+        await init_db()
+    except Exception as e:
+        import logging
+        logging.exception("DB init failed, continuing without DB")
+    await start_web_server()  # sizning aiohttp start qismi
+    await dp.start_polling(bot)
+
+
 
 if __name__ == "__main__":
     asyncio.run(main())
