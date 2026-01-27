@@ -609,6 +609,12 @@ async def create_app() -> web.Application:
 
     return app
 
+async def health(request):
+    return web.json_response({"ok": True})
+
+app.router.add_get("/health", health)
+app.router.add_get("/", health)
+
 
 async def start_miniapp() -> web.AppRunner:
     app = await create_app()
