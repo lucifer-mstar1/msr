@@ -72,13 +72,13 @@ function getInitData() {
 
 function applyTheme(theme) {
   const root = document.documentElement;
-  if (theme === 'light') root.setAttribute('data-theme', 'light');
-  else root.removeAttribute('data-theme');
-  localStorage.setItem('msr_theme', theme);
+  const normalized = theme === 'dark' ? 'dark' : 'light';
+  root.setAttribute('data-theme', normalized);
+  localStorage.setItem('msr_theme', normalized);
 }
 
 function toggleTheme() {
-  const current = localStorage.getItem('msr_theme') || 'dark';
+  const current = localStorage.getItem('msr_theme') || 'light';
   applyTheme(current === 'dark' ? 'light' : 'dark');
 }
 
@@ -231,13 +231,17 @@ function renderChoices() {
   const fields = document.createElement('div');
   fields.className = 'manualFields';
 
-  const saveSlots = (slots) => {
+  const saveSlots = (slots, beforeDone) => {
     current.manualSlots = slots;
     // keep manual too (compat), but submit will normalize anyway
     current.manual = slots;
     state.answers[state.q] = current;
-    renderNav();
-    updateProgress();
+    const afterDone = hasAnyAnswer(current);
+    if (beforeDone !== afterDone) {
+      // Only rerender heavy UI when the 'done' state changes
+      renderNav();
+      updateProgress();
+    }
   };
 
   const lettersLower = 'abcdefghijklmnopqrstuvwxyz';
@@ -246,8 +250,9 @@ function renderChoices() {
 
   const addSlot = () => {
     if (slots.length >= lettersLower.length) return;
+    const beforeDone = hasAnyAnswer(current);
     slots.push('');
-    saveSlots(slots);
+    saveSlots(slots, beforeDone);
     renderChoices();
   };
 
@@ -266,8 +271,9 @@ function renderChoices() {
     inp2.placeholder = idx < 2 ? '' : '...';
     inp2.value = String(val ?? '');
     inp2.oninput = () => {
+      const beforeDone = hasAnyAnswer(current);
       slots[idx] = inp2.value;
-      saveSlots(slots);
+      saveSlots(slots, beforeDone);
     };
 
     row2.appendChild(l);
@@ -680,7 +686,7 @@ async function init() {
     try { t.expand(); } catch (_) {}
   }
 
-  applyTheme(localStorage.getItem('msr_theme') || 'dark');
+  applyTheme(localStorage.getItem('msr_theme') || 'light');
   $('btnTheme').onclick = toggleTheme;
 
   $('gateCheck').onclick = async () => {
