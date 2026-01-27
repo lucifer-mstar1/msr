@@ -27,21 +27,37 @@ const state = {
 };
 
 function emptyAnswer() {
-  return { choices: [], manual: [] };
+  // manualSlots keeps positional inputs (a,b,c,...) for the UI
+  // manual is kept only for backward compatibility (submit will normalize)
+  return { choices: [], manualSlots: ['', ''] };
 }
 
 function hasAnyAnswer(a) {
   if (!a) return false;
-  return (Array.isArray(a.choices) && a.choices.length) || (Array.isArray(a.manual) && a.manual.some((x) => (x || '').trim() !== ''));
+  const m = Array.isArray(a.manualSlots) ? a.manualSlots : (Array.isArray(a.manual) ? a.manual : []);
+  return (Array.isArray(a.choices) && a.choices.length) || (Array.isArray(m) && m.some((x) => (x || '').trim() !== ''));
 }
 
 function normalizeAnswerObj(a) {
   const letters = ['A','B','C','D','E','F'];
   const c = Array.isArray(a?.choices) ? a.choices.map((x) => String(x || '').toUpperCase()).filter((x) => letters.includes(x)) : [];
   const uniqC = [...new Set(c)].sort();
-  const mRaw = Array.isArray(a?.manual) ? a.manual.map((x) => String(x || '').trim()).filter((x) => x !== '') : [];
+  const rawManual = Array.isArray(a?.manualSlots) ? a.manualSlots : (Array.isArray(a?.manual) ? a.manual : []);
+  const mRaw = Array.isArray(rawManual) ? rawManual.map((x) => String(x || '').trim()).filter((x) => x !== '') : [];
   const uniqM = [...new Set(mRaw)];
   return { choices: uniqC, manual: uniqM };
+}
+
+function ensureAnswerForUI(a) {
+  const letters = ['A','B','C','D','E','F'];
+  const c = Array.isArray(a?.choices) ? a.choices.map((x) => String(x || '').toUpperCase()).filter((x) => letters.includes(x)) : [];
+  const uniqC = [...new Set(c)].sort();
+
+  const rawManual = Array.isArray(a?.manualSlots) ? a.manualSlots : (Array.isArray(a?.manual) ? a.manual : []);
+  const slots = Array.isArray(rawManual) ? rawManual.map((x) => String(x ?? '')) : [];
+  while (slots.length < 2) slots.push('');
+
+  return { choices: uniqC, manualSlots: slots };
 }
 
 function tg() {
@@ -165,7 +181,7 @@ function renderChoices() {
   const wrap = $('choices');
   wrap.innerHTML = '';
 
-  const current = normalizeAnswerObj(state.answers[state.q] || emptyAnswer());
+  const current = ensureAnswerForUI(state.answers[state.q] || emptyAnswer());
   state.answers[state.q] = current;
 
   const letters = ['A','B','C','D','E','F'];
@@ -203,7 +219,7 @@ function renderChoices() {
   row.appendChild(clearBtn);
   wrap.appendChild(row);
 
-  // manual answers (multiple)
+  // manual answers (a, b, then ... adds c, d, ...)
   const manualBox = document.createElement('div');
   manualBox.className = 'manualBox';
 
@@ -212,60 +228,65 @@ function renderChoices() {
   label.textContent = '✍ Manual javob(lar):';
   manualBox.appendChild(label);
 
-  const list = document.createElement('div');
-  list.className = 'manualList';
-  (current.manual || []).forEach((val, idx) => {
-    const chip = document.createElement('div');
-    chip.className = 'mchip';
-    const txt = document.createElement('div');
-    txt.className = 'mtext';
-    txt.textContent = val;
-    const x = document.createElement('button');
-    x.type = 'button';
-    x.className = 'mx';
-    x.textContent = '✕';
-    x.onclick = () => {
-      const next = current.manual.filter((_, i) => i !== idx);
-      current.manual = next;
-      state.answers[state.q] = normalizeAnswerObj(current);
-      renderChoices();
-      renderNav();
-      updateProgress();
-    };
-    chip.appendChild(txt);
-    chip.appendChild(x);
-    list.appendChild(chip);
-  });
-  manualBox.appendChild(list);
+  const fields = document.createElement('div');
+  fields.className = 'manualFields';
 
-  const addRow = document.createElement('div');
-  addRow.className = 'manualAdd';
-  const inp = document.createElement('input');
-  inp.type = 'text';
-  inp.maxLength = 128;
-  inp.placeholder = 'masalan: 2**2, sqrt(16), 4x+3 ...';
-  const add = document.createElement('button');
-  add.type = 'button';
-  add.className = 'ghost dots';
-  add.textContent = '...';
-  const doAdd = () => {
-    const v = (inp.value || '').trim();
-    if (!v) return;
-    current.manual = [...(current.manual || []), v];
-    inp.value = '';
-    state.answers[state.q] = normalizeAnswerObj(current);
-    renderChoices();
+  const saveSlots = (slots) => {
+    current.manualSlots = slots;
+    // keep manual too (compat), but submit will normalize anyway
+    current.manual = slots;
+    state.answers[state.q] = current;
     renderNav();
     updateProgress();
   };
-  add.onclick = doAdd;
-  inp.onkeydown = (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); doAdd(); }
-  };
-  addRow.appendChild(inp);
-  addRow.appendChild(add);
-  manualBox.appendChild(addRow);
 
+  const lettersLower = 'abcdefghijklmnopqrstuvwxyz';
+  const slots = Array.isArray(current.manualSlots) ? [...current.manualSlots] : ['', ''];
+  while (slots.length < 2) slots.push('');
+
+  const addSlot = () => {
+    if (slots.length >= lettersLower.length) return;
+    slots.push('');
+    saveSlots(slots);
+    renderChoices();
+  };
+
+  slots.forEach((val, idx) => {
+    const row2 = document.createElement('div');
+    row2.className = 'manualRow';
+
+    const l = document.createElement('div');
+    l.className = 'manualLabel';
+    l.textContent = `${lettersLower[idx]})`;
+
+    const inp2 = document.createElement('input');
+    inp2.type = 'text';
+    inp2.maxLength = 128;
+    inp2.className = 'manualInput';
+    inp2.placeholder = idx < 2 ? '' : '...';
+    inp2.value = String(val ?? '');
+    inp2.oninput = () => {
+      slots[idx] = inp2.value;
+      saveSlots(slots);
+    };
+
+    row2.appendChild(l);
+    row2.appendChild(inp2);
+
+    // Only show the "..." button on the last row
+    if (idx === slots.length - 1) {
+      const more = document.createElement('button');
+      more.type = 'button';
+      more.className = 'ghost dots manualMore';
+      more.textContent = '...';
+      more.onclick = addSlot;
+      row2.appendChild(more);
+    }
+
+    fields.appendChild(row2);
+  });
+
+  manualBox.appendChild(fields);
   wrap.appendChild(manualBox);
 }
 
