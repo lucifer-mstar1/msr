@@ -1,30 +1,22 @@
-from __future__ import annotations
+import os
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from app.settings import settings
+DATABASE_URL = os.environ["DATABASE_URL"]
 
-
-def _to_async_driver(url: str) -> str:
-    u = (url or "").strip()
-    if u.startswith("postgresql://"):
-        return u.replace("postgresql://", "postgresql+asyncpg://", 1)
-    if u.startswith("postgres://"):
-        return u.replace("postgres://", "postgresql+asyncpg://", 1)
-    return u
-
-
-url = settings.sql_url
-if not url:
-    raise RuntimeError("No DB url. Set DATABASE_URL or SQLITE_PATH.")
+# asyncpg uchun prefix
+if DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace(
+        "postgresql://", "postgresql+asyncpg://", 1
+    )
 
 engine = create_async_engine(
-    _to_async_driver(url),
+    DATABASE_URL,
     echo=False,
     pool_pre_ping=True,
-    future=True,
 )
 
-SessionLocal: async_sessionmaker[AsyncSession] = async_sessionmaker(
+SessionLocal = async_sessionmaker(
     bind=engine,
+    class_=AsyncSession,
     expire_on_commit=False,
 )
