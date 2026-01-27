@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 
+from aiohttp import web
 from aiogram import Bot, Dispatcher
 
 from app.settings import settings
 from app.db import engine
 from app.models import Base
-from app.handlers import common, admin, tests
-from app.handlers import ceo
+from app.handlers import common, admin, tests, ceo
 from app.miniapp_server import start_miniapp
-import os
-from aiohttp import web
+
 
 async def start_web_server():
     app = web.Application()
@@ -28,11 +28,12 @@ async def start_web_server():
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
-    print(f"WEB server running on 0.0.0.0:{port}")
+    logging.info(f"WEB server running on 0.0.0.0:{port}")
+
+    return runner
 
 
 async def init_db() -> None:
-    # Safety: ensure tables exist even if alembic not run.
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
@@ -40,38 +41,41 @@ async def init_db() -> None:
 async def main() -> None:
     logging.basicConfig(level=logging.INFO)
 
-    await init_db()
+    # 1) Render port ochilsin
+    web_runner = await start_web_server()
 
+    # 2) DB init (yiqilsa ham app ishlayversin)
+    try:
+        await init_db()
+    except Exception:
+        logging.exception("DB init failed, continuing without DB")
+
+    # 3) Bot
     if not settings.bot_token:
         raise RuntimeError("BOT_TOKEN is empty. Put it into .env")
 
     bot = Bot(token=settings.bot_token)
     dp = Dispatcher()
-    # Order matters: more specific routers first, common fallbacks last
+
     dp.include_router(ceo.router)
     dp.include_router(admin.router)
     dp.include_router(tests.router)
     dp.include_router(common.router)
 
-    # Start miniapp server (aiohttp) in the same process
-    runner = await start_miniapp()
+    # 4) Miniapp server
+    miniapp_runner = await start_miniapp()
+
     try:
         await dp.start_polling(bot)
     finally:
         try:
-            await runner.cleanup()
+            await miniapp_runner.cleanup()
         except Exception:
             pass
-
-async def main():
-    try:
-        await init_db()
-    except Exception as e:
-        import logging
-        logging.exception("DB init failed, continuing without DB")
-    await start_web_server()  # sizning aiohttp start qismi
-    await dp.start_polling(bot)
-
+        try:
+            await web_runner.cleanup()
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":
