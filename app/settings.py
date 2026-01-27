@@ -23,7 +23,10 @@ class Settings(BaseSettings):
     required_group_url: str = Field(default="", alias="REQUIRED_GROUP_URL")
 
     # Database
+    # Database
+    database_url: str = Field(default="", alias="DATABASE_URL")
     sqlite_path: str = Field(default="data/bot.db", alias="SQLITE_PATH")
+
 
     # Admin panel (aiohttp, optional)
     admin_panel_host: str = Field(default="127.0.0.1", alias="ADMIN_PANEL_HOST")
@@ -43,6 +46,15 @@ class Settings(BaseSettings):
 
     # UX
     emoji_mode_default: bool = Field(default=True, alias="EMOJI_MODE_DEFAULT")
+
+
+    @property
+    def sql_url(self) -> str:
+        """Prefer Postgres in production, fallback to sqlite locally."""
+        if (self.database_url or "").strip():
+            return (self.database_url or "").strip()
+        return self.sqlite_url
+
 
     @field_validator("admin_tg_ids", "ceo_tg_ids", mode="before")
     @classmethod
