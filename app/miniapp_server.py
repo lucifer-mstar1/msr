@@ -620,6 +620,10 @@ async def start_miniapp() -> web.AppRunner:
     app = await create_app()
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, host=settings.miniapp_host, port=int(settings.miniapp_port))
+
+    port = int(os.environ.get("PORT", "8000"))
+    site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
+
     return runner
+

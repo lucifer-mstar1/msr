@@ -20,7 +20,6 @@ async def init_db() -> None:
 async def main() -> None:
     logging.basicConfig(level=logging.INFO)
 
-    # DB init (yiqilsa ham davom etsin)
     try:
         await init_db()
     except Exception:
@@ -36,7 +35,7 @@ async def main() -> None:
     dp.include_router(tests.router)
     dp.include_router(common.router)
 
-    # Miniapp server (BU Render PORTni ochadi)
+    # AYNAN SHU PORTni miniapp ochadi (Render PORT)
     runner = await start_miniapp()
 
     try:
