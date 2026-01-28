@@ -9,7 +9,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
-
     # Telegram
     bot_token: str = Field(default="", alias="BOT_TOKEN")
     bot_username: str = Field(default="", alias="BOT_USERNAME")  # without @
@@ -46,14 +45,6 @@ class Settings(BaseSettings):
 
     # UX
     emoji_mode_default: bool = Field(default=True, alias="EMOJI_MODE_DEFAULT")
-
-
-    @property
-    def sql_url(self) -> str:
-        """Prefer Postgres in production, fallback to sqlite locally."""
-        if (self.database_url or "").strip():
-            return (self.database_url or "").strip()
-        return self.sqlite_url
 
 
     @field_validator("admin_tg_ids", "ceo_tg_ids", mode="before")

@@ -20,31 +20,21 @@ async def init_db() -> None:
 async def main() -> None:
     logging.basicConfig(level=logging.INFO)
 
-    try:
-        await init_db()
-    except Exception:
-        logging.exception("DB init failed, continuing without DB")
-
-    if not settings.bot_token:
-        raise RuntimeError("BOT_TOKEN is empty. Put it into .env")
+    await init_db()
 
     bot = Bot(token=settings.bot_token)
     dp = Dispatcher()
+
     dp.include_router(ceo.router)
     dp.include_router(admin.router)
     dp.include_router(tests.router)
     dp.include_router(common.router)
 
-    # AYNAN SHU PORTni miniapp ochadi (Render PORT)
     runner = await start_miniapp()
-
     try:
         await dp.start_polling(bot)
     finally:
-        try:
-            await runner.cleanup()
-        except Exception:
-            pass
+        await runner.cleanup()
 
 
 if __name__ == "__main__":
