@@ -3,12 +3,18 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List
 import os
+
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
     # Telegram
     bot_token: str = Field(default="", alias="BOT_TOKEN")
     bot_username: str = Field(default="", alias="BOT_USERNAME")  # without @
@@ -22,10 +28,8 @@ class Settings(BaseSettings):
     required_group_url: str = Field(default="", alias="REQUIRED_GROUP_URL")
 
     # Database
-    # Database
     database_url: str = Field(default="", alias="DATABASE_URL")
     sqlite_path: str = Field(default="data/bot.db", alias="SQLITE_PATH")
-
 
     # Admin panel (aiohttp, optional)
     admin_panel_host: str = Field(default="127.0.0.1", alias="ADMIN_PANEL_HOST")
@@ -34,18 +38,16 @@ class Settings(BaseSettings):
     admin_panel_token: str = Field(default="", alias="ADMIN_PANEL_TOKEN")
 
     # MiniApp (aiohttp)
-    # MiniApp (aiohttp)
-    # MiniApp (aiohttp)
     miniapp_host: str = Field(default="0.0.0.0", alias="MINIAPP_HOST")
-    miniapp_port: int = Field(default_factory=lambda: int(os.getenv("PORT", os.getenv("MINIAPP_PORT", "8000"))), alias="MINIAPP_PORT")
+    miniapp_port: int = Field(
+        default_factory=lambda: int(os.getenv("PORT", os.getenv("MINIAPP_PORT", "8000"))),
+        alias="MINIAPP_PORT",
+    )
     miniapp_public_url: str = Field(default="", alias="MINIAPP_PUBLIC_URL")
     miniapp_dev_bypass: bool = Field(default=False, alias="MINIAPP_DEV_BYPASS")
 
-
-
     # UX
     emoji_mode_default: bool = Field(default=True, alias="EMOJI_MODE_DEFAULT")
-
 
     @field_validator("admin_tg_ids", "ceo_tg_ids", mode="before")
     @classmethod
@@ -64,6 +66,20 @@ class Settings(BaseSettings):
                 out.append(int(part))
         return out
 
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def _normalize_db_url(cls, v):
+        s = (v or "").strip()
+        if not s:
+            return ""
+        # If user provides "postgresql://", SQLAlchemy async engine needs "postgresql+asyncpg://"
+        if s.startswith("postgresql://"):
+            return "postgresql+asyncpg://" + s[len("postgresql://") :]
+        if s.startswith("postgres://"):
+            # some providers still give postgres://
+            return "postgresql+asyncpg://" + s[len("postgres://") :]
+        return s
+
     @staticmethod
     def _normalize_url(value: str) -> str:
         v = (value or "").strip()
@@ -71,7 +87,7 @@ class Settings(BaseSettings):
             return ""
         for prefix in ("ADMIN_PANEL_PUBLIC_URL=", "MINIAPP_PUBLIC_URL="):
             if v.startswith(prefix):
-                v = v[len(prefix):].strip()
+                v = v[len(prefix) :].strip()
         return v
 
     @property

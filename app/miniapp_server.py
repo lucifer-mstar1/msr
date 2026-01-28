@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
@@ -270,7 +271,6 @@ async def handle_submit(request: web.Request) -> web.Response:
     full_name = (str(user.get("first_name", "")) + " " + str(user.get("last_name", ""))).strip() or "Ism Familiya"
 
     async with SessionLocal() as session:
-        # upsert user
         await get_or_create_user(
             session,
             tg_id=tg_id,
@@ -281,7 +281,6 @@ async def handle_submit(request: web.Request) -> web.Response:
 
         t = await get_test(session, test_id)
 
-        # one attempt rule (except baseline users)
         prev = await get_latest_submission(session, tg_id, test_id)
         if prev is not None:
             return web.json_response(
@@ -333,7 +332,6 @@ async def handle_submit(request: web.Request) -> web.Response:
                 is_rasch=False,
             )
 
-    # certificate render
     CERT_DIR.mkdir(parents=True, exist_ok=True)
     issued = datetime.utcnow()
     out_path = CERT_DIR / f"{tg_id}_{test_id}_{sub.id}.pdf"
@@ -344,14 +342,20 @@ async def handle_submit(request: web.Request) -> web.Response:
     if t.category == "sat":
         sat_score = sat_scaled_from_percentile(score)
         score_text = str(sat_score)
-        render_sat_style_certificate(out_path, CertificateData(full_name=full_name, test_name=t.name, score_text=score_text, issued_at=issued))
+        render_sat_style_certificate(
+            out_path,
+            CertificateData(full_name=full_name, test_name=t.name, score_text=score_text, issued_at=issued),
+        )
         extra["sat_math"] = sat_score
     elif t.category == "milliy":
         level = _milliy_level(score)
         render_milliy_certificate(out_path, full_name=full_name, test_name=t.name, percent=score, level=level, issued_at=issued)
         extra["milliy_level"] = level
     else:
-        render_simple_certificate(out_path, CertificateData(full_name=full_name, test_name=t.name, score_text=score_text, issued_at=issued))
+        render_simple_certificate(
+            out_path,
+            CertificateData(full_name=full_name, test_name=t.name, score_text=score_text, issued_at=issued),
+        )
 
     cert_id = await create_certificate_record(tg_id=tg_id, test_id=test_id, pdf_path=str(out_path), score_text=score_text)
 
@@ -384,7 +388,6 @@ def _roles_for_tg(tg_id: int) -> list[str]:
         roles.append("admin")
     if tg_id in set(settings.ceo_tg_ids or []):
         roles.append("ceo")
-    # unique + stable
     out: list[str] = []
     for r in roles:
         if r not in out:
@@ -491,7 +494,6 @@ async def handle_admin_baseline_submit(request: web.Request) -> web.Response:
             return web.json_response({"error": "baseline faqat Rasch testlar uchun"}, status=400)
         await ensure_baseline_users(session)
 
-        # delete previous baseline submission for this baseline user
         await delete_submissions_for_user_test(session, baseline_tg, test_id)
 
         answers: Dict[int, str] = {}
@@ -536,7 +538,6 @@ async def handle_admin_baseline_status(request: web.Request) -> web.Response:
 
 
 async def _tg_send_document(*, tg_id: int, file_path: Path, caption: str = "") -> bool:
-    """Send a document to user chat via Bot API."""
     token = settings.bot_token
     if not token:
         return False
@@ -561,7 +562,6 @@ async def _tg_send_document(*, tg_id: int, file_path: Path, caption: str = "") -
 
 
 async def handle_send_certificate(request: web.Request) -> web.Response:
-    """MiniApp button: sends the last certificate PDF to bot chat."""
     body = await _json(request)
     try:
         user = _user_from_request(request, body)
@@ -589,9 +589,17 @@ async def handle_send_certificate(request: web.Request) -> web.Response:
     return web.json_response({"ok": True})
 
 
+async def health(request: web.Request) -> web.Response:
+    return web.json_response({"ok": True})
+
+
 async def create_app() -> web.Application:
     app = web.Application()
+
+    # routes
     app.router.add_get("/", handle_index)
+    app.router.add_get("/health", health)
+
     app.router.add_get("/api/me", handle_me)
     app.router.add_get("/api/categories", handle_categories)
     app.router.add_get("/api/tests", handle_tests)
@@ -609,21 +617,15 @@ async def create_app() -> web.Application:
 
     return app
 
-async def health(request):
-    return web.json_response({"ok": True})
-
-app.router.add_get("/health", health)
-app.router.add_get("/", health)
-
 
 async def start_miniapp() -> web.AppRunner:
     app = await create_app()
     runner = web.AppRunner(app)
     await runner.setup()
 
-    port = int(os.environ.get("PORT", "8000"))
-    site = web.TCPSite(runner, "0.0.0.0", port)
+    host = settings.miniapp_host
+    port = int(settings.miniapp_port)  # Render PORT comes here automatically
+    site = web.TCPSite(runner, host, port)
     await site.start()
 
     return runner
-

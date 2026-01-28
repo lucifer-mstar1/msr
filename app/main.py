@@ -13,8 +13,12 @@ from app.miniapp_server import start_miniapp
 
 
 async def init_db() -> None:
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Render / Neon can be cold-starty. Don't crash the service if DB is temporarily unavailable.
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception:
+        logging.exception("DB init failed, continuing without DB")
 
 
 async def main() -> None:
