@@ -1,19 +1,15 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import List
-import os
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     # Telegram
     bot_token: str = Field(default="", alias="BOT_TOKEN")
@@ -40,7 +36,7 @@ class Settings(BaseSettings):
     # MiniApp (aiohttp)
     miniapp_host: str = Field(default="0.0.0.0", alias="MINIAPP_HOST")
     miniapp_port: int = Field(
-        default_factory=lambda: int(os.getenv("PORT", os.getenv("MINIAPP_PORT", "8000"))),
+        default_factory=lambda: int(os.getenv("PORT") or os.getenv("MINIAPP_PORT") or "8000"),
         alias="MINIAPP_PORT",
     )
     miniapp_public_url: str = Field(default="", alias="MINIAPP_PUBLIC_URL")
@@ -66,20 +62,6 @@ class Settings(BaseSettings):
                 out.append(int(part))
         return out
 
-    @field_validator("database_url", mode="before")
-    @classmethod
-    def _normalize_db_url(cls, v):
-        s = (v or "").strip()
-        if not s:
-            return ""
-        # If user provides "postgresql://", SQLAlchemy async engine needs "postgresql+asyncpg://"
-        if s.startswith("postgresql://"):
-            return "postgresql+asyncpg://" + s[len("postgresql://") :]
-        if s.startswith("postgres://"):
-            # some providers still give postgres://
-            return "postgresql+asyncpg://" + s[len("postgres://") :]
-        return s
-
     @staticmethod
     def _normalize_url(value: str) -> str:
         v = (value or "").strip()
@@ -87,7 +69,7 @@ class Settings(BaseSettings):
             return ""
         for prefix in ("ADMIN_PANEL_PUBLIC_URL=", "MINIAPP_PUBLIC_URL="):
             if v.startswith(prefix):
-                v = v[len(prefix) :].strip()
+                v = v[len(prefix):].strip()
         return v
 
     @property

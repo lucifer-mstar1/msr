@@ -13,18 +13,18 @@ from app.miniapp_server import start_miniapp
 
 
 async def init_db() -> None:
-    # Render / Neon can be cold-starty. Don't crash the service if DB is temporarily unavailable.
-    try:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-    except Exception:
-        logging.exception("DB init failed, continuing without DB")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
 
 async def main() -> None:
     logging.basicConfig(level=logging.INFO)
 
-    await init_db()
+    # DB ishlamasa ham app yi yiqitib yubormaymiz
+    try:
+        await init_db()
+    except Exception:
+        logging.exception("DB init failed, continuing without DB")
 
     bot = Bot(token=settings.bot_token)
     dp = Dispatcher()
